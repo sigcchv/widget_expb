@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Résultats Eau Potable</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    th { background: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h2>Résultats qualité de l’eau potable</h2>
+  <div id="info">Chargement...</div>
+  <table id="results" style="display:none;">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Paramètre</th>
+        <th>Valeur</th>
+        <th>Unité</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function getParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    async function loadData() {
+      const codeCommune = getParam("code_commune") || "66206"; // défaut : St-Cyprien
+      const codeParametre = getParam("code_parametre") || "1340"; // défaut : Nitrates
+      const year = new Date().getFullYear();
+      const dateDebut = `${year}-06-01`;
+      const dateFin = `${year}-06-30`;
+
+      const url = `https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis?code_commune=${codeCommune}&code_parametre=${codeParametre}&date_debut=${dateDebut}&date_fin=${dateFin}`;
+
+      document.getElementById("info").textContent = "Chargement des données...";
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data || !data.data || data.data.length === 0) {
+          document.getElementById("info").textContent = "Aucun résultat trouvé pour ces critères.";
+          return;
+        }
+
+        document.getElementById("info").textContent = `Résultats (${data.data.length} analyses)`;
+        const tbody = document.querySelector("#results tbody");
+        tbody.innerHTML = "";
+        data.data.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.date_prelevement}</td>
+            <td>${r.libelle_parametre}</td>
+            <td>${r.resultat}</td>
+            <td>${r.unite}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        document.getElementById("results").style.display = "table";
+      } catch (err) {
+        document.getElementById("info").textContent = "Erreur : " + err;
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
